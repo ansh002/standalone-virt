@@ -1,0 +1,31 @@
+.global-search-results {
+
+  .view-results-summary {
+    font-weight: bold;
+  }
+
+  .views-exposed-form {
+    display: none;
+  }
+
+  .item-list {
+
+    ul {
+      padding: 0;
+      list-style: none;
+    }
+
+    li {
+      @include rem(padding, 0 0 16px 0);
+    }
+
+    .views-field-title {
+      font-weight: bold;
+    }
+  }
+}
+
+.paragraph--type--search-api {
+  padding: 20px 15px;
+  overflow: visible;
+}

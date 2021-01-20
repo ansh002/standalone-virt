@@ -1,0 +1,4 @@
+services:
+  recurring_events.event_creation_service:
+    class: Drupal\recurring_events\EventCreationService
+    arguments: ['@string_translation', '@database', '@logger.factory', '@messenger', '@plugin.manager.field.field_type', '@entity_field.manager', '@module_handler', '@entity_type.manager', '@keyvalue']

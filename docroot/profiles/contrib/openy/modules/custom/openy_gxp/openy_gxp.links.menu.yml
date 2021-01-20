@@ -1,0 +1,6 @@
+openy_gxp.admin:
+  title: 'GroupEx Pro settings'
+  description: 'Configure GroupEx Pro settings'
+  parent: openy_system.openy_integrations_groupexpro
+  route_name: openy_gxp.settings
+  weight: 100

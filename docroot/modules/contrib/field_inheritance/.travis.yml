@@ -1,0 +1,100 @@
+language: php
+
+# The Travis CI container mode has random functional test fails, so we must use
+# sudo here.
+sudo: true
+
+php:
+  - 7.1
+  - 7.2
+  - 7.3
+
+services:
+  - mysql
+
+env:
+  global:
+    - MODULE=field_inheritance
+  matrix:
+    - DRUPAL_CORE=8.8.x DRUSH_VER=9.0
+    - DRUPAL_CORE=8.9.x DRUSH_VER=9.0
+    - DRUPAL_CORE=9.0.x DRUSH_VER=10.0
+
+matrix:
+  fast_finish: true
+  exclude:
+    - php: 7.1
+      env: DRUPAL_CORE=9.0.x DRUSH_VER=10.0
+    - php: 7.2
+      env: DRUPAL_CORE=9.0.x DRUSH_VER=10.0
+
+# Be sure to cache composer downloads.
+cache:
+  directories:
+    - $HOME/.composer
+
+before_script:
+  # Remove Xdebug as we don't need it and it causes
+  # PHP Fatal error:  Maximum function nesting level of '256' reached.
+  # We also don't care if that file exists or not on PHP 7.
+  - phpenv config-rm xdebug.ini || true
+
+  # Navigate out of module directory to prevent blown stack by recursive module
+  # lookup.
+  - cd ..
+
+  # Create database.
+  - mysql -e "create database $MODULE"
+  # Export database variable for kernel tests.
+  - export SIMPLETEST_DB=mysql://root:@127.0.0.1/$MODULE
+
+  # Create a new Drupal project using the appropriate version using Composer.
+  - COMPOSER_MEMORY_LIMIT=-1 composer create-project drupal/recommended-project:$DRUPAL_CORE drupal --stability dev --no-interaction
+  - cd drupal
+  - DRUPAL_ROOT=$(pwd)
+
+  # Add the necessary third party dependencies to run these tests.
+  - COMPOSER_MEMORY_LIMIT=-1 composer require drush/drush:^$DRUSH_VER
+  - COMPOSER_MEMORY_LIMIT=-1 composer require mglaman/drupal-check --dev
+
+  - cd $DRUPAL_ROOT
+
+  # The recurring events module artifact is already available, so copy it in
+  # to the contrib module directory so we can run our tests.
+  - mkdir web/modules/contrib
+  - cp -R $TRAVIS_BUILD_DIR web/modules/contrib/$MODULE
+
+  # Coder is already installed as part of composer install. We just need to set
+  # the installed_paths to pick up the Drupal standards.
+  - $DRUPAL_ROOT/vendor/bin/phpcs --config-set installed_paths $DRUPAL_ROOT/vendor/drupal/coder/coder_sniffer
+
+  # Export web server URL for browser tests.
+  - export SIMPLETEST_BASE_URL=http://localhost:8888
+
+script:
+  # Install the site using Drush and set up some configuration.
+  - ./vendor/bin/drush site-install standard --yes --account-pass=admin --db-url=$SIMPLETEST_DB
+  - ./vendor/bin/drush config-set system.performance css.preprocess 0 --yes
+  - ./vendor/bin/drush config-set system.performance js.preprocess 0 --yes
+  - ./vendor/bin/drush config-set system.logging error_level all --yes
+
+  # Enable the modules we care to run the tests.
+  - ./vendor/bin/drush en simpletest $MODULE --yes
+
+  # Start up a HTTP server for tests.
+  - ./vendor/bin/drush runserver --default-server=builtin 8888 > /dev/null &
+
+  # Run the PHPUnit tests.
+  - ./vendor/bin/phpunit -c ./web/core/phpunit.xml.dist --verbose --group=$MODULE ./web/modules/contrib/$MODULE
+
+  # Run the deprecation checks.
+  - ./vendor/bin/drupal-check ./web/modules/contrib/$MODULE
+
+  # Check for coding standards. First change directory to our module.
+  - cd $DRUPAL_ROOT/web/modules/contrib/$MODULE
+
+  # Show the violations in detail and do not fail for any errors or warnings.
+  - $DRUPAL_ROOT/vendor/bin/phpcs --standard=drupal,drupalPractice --ignore=vendor --report-width=130 --colors --runtime-set ignore_warnings_on_exit 1 --runtime-set ignore_errors_on_exit 0 .
+
+  # Run again to give a summary and total count.
+  - $DRUPAL_ROOT/vendor/bin/phpcs --standard=drupal,drupalPractice --ignore=vendor --report-width=130 --colors --runtime-set ignore_warnings_on_exit 1 --runtime-set ignore_errors_on_exit 0 --report=summary .

@@ -1,0 +1,24 @@
+<?php
+
+/**
+ * @file
+ * Module file for the view_block_filter_view module.
+ */
+
+use Drupal\Core\Form\FormStateInterface;
+
+/**
+ * Implements hook_views_plugins_display_alter().
+ */
+function views_block_filter_block_views_plugins_display_alter(array &$plugins) {
+  // Force the block display plugin to use our block display plugin.
+  $plugins['block']['class'] = 'Drupal\views_block_filter_block\Plugin\views\display\ViewsBlockFilterBlockPluginDisplayBlock';
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function views_block_filter_block_form_views_exposed_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  // Force to display reset button.
+  $form['actions']['reset']['#access'] = TRUE;
+}

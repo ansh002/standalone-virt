@@ -1,0 +1,45 @@
+---
+- name: Remove build collection directory
+  file:
+    state: absent
+    path: "{{ solr_conf_path }}/{{ mysql_db }}"
+    mode: 0755
+
+- name: Create build collection directory
+  file:
+    state: directory
+    path: "{{ solr_conf_path }}/{{ mysql_db }}"
+    mode: 0755
+
+- name: Copy default collection to unique build collection directory
+  synchronize:
+    src: "{{ default_solr_collection_path }}/"
+    dest: "{{ solr_conf_path }}/{{ mysql_db }}"
+  delegate_to: "{{ inventory_hostname }}"
+
+
+- name: Copy solr config from search_api_solr to unique build collection directory
+  synchronize:
+    src: "{{ solr_module_config_path }}/"
+    dest: "{{ solr_conf_path }}/{{ mysql_db }}/conf"
+  delegate_to: "{{ inventory_hostname }}"
+
+- name: Set ownership for build collection directory
+  file:
+    state: directory
+    path: "{{ solr_conf_path }}/{{ mysql_db }}"
+    mode: 0755
+    owner: solr
+    group: solr
+    recurse: yes
+
+- name: Changing name of the solr collection within build directory
+  lineinfile:
+    dest: "{{ solr_conf_path }}/{{ mysql_db }}/core.properties"
+    regexp: '^name='
+    line: "name={{ mysql_db }}"
+
+- name: Restart jetty solr
+  service:
+    state: restarted
+    name: jetty

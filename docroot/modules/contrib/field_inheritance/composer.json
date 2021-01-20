@@ -1,0 +1,24 @@
+{
+  "name": "drupal/field_inheritance",
+  "type": "drupal-module",
+  "description": "Provides the ability to inherit data from one entity to another",
+  "keywords": ["Drupal"],
+  "license": "GPL-2.0+",
+  "homepage": "https://www.drupal.org/project/field_inheritance",
+  "minimum-stability": "dev",
+  "support": {
+    "issues": "https://www.drupal.org/project/issues/field_inheritance",
+    "source": "http://cgit.drupalcode.org/field_inheritance"
+  },
+  "require": {
+    "cweagans/composer-patches": "~1.0",
+    "wikimedia/composer-merge-plugin": "^1.5@dev"
+  },
+  "extra": {
+    "patches": {
+      "drupal/core": {
+        "Views does not support computed bundle fields": "https://www.drupal.org/files/issues/2019-10-20/2981047-fix-only-44.patch"
+      }
+    }
+  }
+}

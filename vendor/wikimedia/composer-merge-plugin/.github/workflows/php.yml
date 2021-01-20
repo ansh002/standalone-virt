@@ -1,0 +1,77 @@
+name: PHP Composer
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php-versions:
+          - "7.2"
+          - "7.3"
+          - "7.4"
+          - "8.0"
+    env:
+      COMPOSER_DISABLE_XDEBUG_WARN: 1
+
+    name: PHP ${{ matrix.php-versions }} test
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    
+    - name: Setup PHP version
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ matrix.php-versions }}
+        coverage: xdebug
+        tools: composer:v1
+
+    - name: Install composer dependencies
+      run: composer install --prefer-dist --no-progress
+
+    - name: Run tests
+      run: composer test
+
+  ocular-push:
+    runs-on: ubuntu-latest
+    if: ${{ success() }} && github.repository == 'wikimedia/composer-merge-plugin'
+    needs: [run]
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Setup PHP version for coverage
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: "7.2"
+        coverage: xdebug
+        tools: composer:v1
+
+    - name: Install dependencies
+      run: composer install --prefer-dist --no-progress
+
+    - name: Run coverage
+      run: composer coverage
+
+    - name: Get ocular
+      run: wget https://scrutinizer-ci.com/ocular.phar
+
+    - name: Upload code coverage
+      run: php ocular.phar code-coverage:upload --format=php-clover reports/coverage.xml
+
+  irc-push:
+    runs-on: ubuntu-latest
+    if: ${{ always() }} && github.repository == 'wikimedia/composer-merge-plugin'
+    needs: [run]
+    steps:
+    - name: irc push notification
+      uses: rectalogic/notify-irc@v1
+      if: github.event_name == 'push'
+      with:
+        channel: "#wikimedia-dev"
+        nickname: wikimedia-github
+        message: "${{ github.repository }}#${{ github.run_id }} (${{ github.ref }} - ${{ github.sha }} ${{ github.actor }}): ${{ job.status }} - https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"

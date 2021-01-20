@@ -1,0 +1,31 @@
+--- media_entity_video.install
++++ media_entity_video.install
+@@ -5,15 +5,17 @@
+  * Install, uninstall and update hooks for Media entity video module.
+  */
+ 
++use Drupal\Core\File\FileSystemInterface;
++
+ /**
+  * Implements hook_install().
+  */
+ function media_entity_video_install() {
+   $source = drupal_get_path('module', 'media_entity_video') . '/images/icons';
+   $destination = \Drupal::config('media.settings')->get('icon_base_uri');
+-  file_prepare_directory($destination, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS);
++  \Drupal::service('file_system')->prepareDirectory($destination, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
+ 
+-  $files = file_scan_directory($source, '/.*\.(svg|png|jpg|jpeg|gif)$/');
++  $files = \Drupal::service('file_system')->scanDirectory($source, '/.*\.(svg|png|jpg|jpeg|gif)$/');
+   foreach ($files as $file) {
+     // When reinstalling we don't want to copy the icons when
+     // they already exist. The icons could be replaced (by a contrib module or
+@@ -34,7 +36,7 @@ function media_entity_video_requirements($phase) {
+   $requirements = [];
+   if ($phase == 'install') {
+     $destination = \Drupal::config('media.settings')->get('icon_base_uri');
+-    file_prepare_directory($destination, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS);
++    \Drupal::service('file_system')->prepareDirectory($destination, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
+     $is_writable = is_writable($destination);
+     $is_directory = is_dir($destination);
+     if (!$is_writable || !$is_directory) {
